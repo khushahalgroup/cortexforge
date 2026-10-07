@@ -1,0 +1,23 @@
+{
+  "name": "cortexforge",
+  "version": "1.0.0",
+  "description": "Next-Generation Autonomous Developer Intelligence Platform for AI Coding Agents",
+  "author": {
+    "name": "CortexForge Team"
+  },
+  "repository": "https://github.com/khushahalgroup/cortexforge",
+  "license": "Apache-2.0",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "developer-intelligence",
+    "mcp",
+    "plugin",
+    "memory",
+    "compression",
+    "knowledge-graph",
+    "architecture",
+    "minimalism"
+  ],
+  "homepage": "https://github.com/khushahalgroup/cortexforge#readme"
+}
