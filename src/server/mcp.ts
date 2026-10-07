@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import { CortexDatabase } from '../storage/database.ts';
 import { MemoryEngine } from '../memory/memoryEngine.ts';
 import { CodeGraph } from '../graph/codeGraph.ts';
@@ -34,7 +35,7 @@ export class McpServer {
     this.interceptor = new AgentInterceptor(this.db);
   }
 
-  public handleToolCall(name: string, args: Record<string, any>): Record<string, any> {
+  public handleToolCall(name: string, args: Record<string, any> = {}): Record<string, any> {
     switch (name) {
       case 'fusion_status': {
         const detection = AgentDetector.detect();
@@ -56,10 +57,10 @@ export class McpServer {
       case 'fusion_memory': {
         if (args.action === 'record') {
           const rec = this.memory.recordDecision(
-            args.topic,
-            args.summary,
+            args.topic || 'General',
+            args.summary || '',
             args.details,
-            args.relatedSymbols,
+            args.relatedSymbols || [],
             args.evidence || 'FACT',
             args.importance || 0.8
           );
@@ -139,7 +140,9 @@ export class McpServer {
       }
 
       case 'fusion_path': {
-        return this.graph.findShortestPath(args.source || '', args.target || '');
+        const source = args.source || args.from || '';
+        const target = args.target || args.to || '';
+        return this.graph.findShortestPath(source, target);
       }
 
       case 'fusion_communities': {
@@ -160,19 +163,27 @@ export class McpServer {
       }
 
       case 'fusion_crush': {
-        return SmartCrusher.crush(args.input);
+        return SmartCrusher.crush(args.input || args.data);
       }
 
       case 'fusion_fold': {
-        if (args.action === 'unfold' && args.symbol) {
-          return { code: CodeFolder.smartUnfold(args.code || '', args.symbol) };
+        let code = args.code || '';
+        if (!code && args.filePath && fs.existsSync(args.filePath)) {
+          code = fs.readFileSync(args.filePath, 'utf-8');
         }
-        return CodeFolder.smartOutline(args.code || '');
+        if (args.action === 'unfold' && args.symbol) {
+          return { code: CodeFolder.smartUnfold(code, args.symbol) };
+        }
+        return CodeFolder.smartOutline(code);
       }
 
       case 'fusion_audit': {
         const auditor = new OverengineeringAuditor(this.db);
-        return auditor.auditCode(args.code || '', args.fileName || 'snippet');
+        let code = args.code || '';
+        if (!code && args.filePath && fs.existsSync(args.filePath)) {
+          code = fs.readFileSync(args.filePath, 'utf-8');
+        }
+        return auditor.auditCode(code, args.fileName || args.filePath || 'snippet');
       }
 
       case 'fusion_scorecard': {
@@ -182,6 +193,175 @@ export class McpServer {
       default:
         return { error: `Tool '${name}' not recognized.` };
     }
+  }
+
+  public getToolsList() {
+    return [
+      {
+        name: 'fusion_status',
+        description: 'Show CortexForge status, host agent, and live metrics',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_memory',
+        description: 'Query or record persistent engineering memory (BM25 Hybrid Semantic Search)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['query', 'record'], description: 'Query past memories or record a new decision' },
+            query: { type: 'string', description: 'Search query for memories' },
+            topic: { type: 'string', description: 'Topic or category when recording' },
+            summary: { type: 'string', description: 'Summary of the decision or bug fix' },
+            details: { type: 'string', description: 'Extended context or reasoning' },
+            relatedSymbols: { type: 'array', items: { type: 'string' }, description: 'Related symbols' },
+            evidence: { type: 'string', enum: ['FACT', 'HISTORICAL', 'INFERENCE', 'UNCERTAIN'] },
+            importance: { type: 'number', description: 'Importance from 0.1 to 1.0' },
+          },
+        },
+      },
+      {
+        name: 'fusion_graph',
+        description: 'Query code symbols, call graph, callers, callees, and blast radius',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', enum: ['query', 'index'], description: 'Query symbol or re-index codebase' },
+            symbol: { type: 'string', description: 'Symbol name to look up' },
+          },
+        },
+      },
+      {
+        name: 'fusion_path',
+        description: 'Find shortest dependency/call path between two symbols (Dijkstra/BFS)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            from: { type: 'string', description: 'Source symbol name' },
+            to: { type: 'string', description: 'Target symbol name' },
+            source: { type: 'string', description: 'Alias for from' },
+            target: { type: 'string', description: 'Alias for to' },
+          },
+        },
+      },
+      {
+        name: 'fusion_communities',
+        description: 'Detect functional code clusters and modular communities in the repository',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_god_nodes',
+        description: 'Identify architectural god nodes and single-points-of-failure by degree centrality',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            threshold: { type: 'number', description: 'Minimum connection degree (default: 2)' },
+          },
+        },
+      },
+      {
+        name: 'fusion_cycles',
+        description: 'Detect circular dependency loops and import cycles across files',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_drift',
+        description: 'Audit architectural layers and detect illegal upward dependency drift',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_architecture',
+        description: 'Generate source-backed architecture layers and live Mermaid topology diagrams',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_timeline',
+        description: 'Retrieve chronological engineering decision causality chain',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_briefing',
+        description: 'Generate instant cold-start briefing of project state, entrypoints, and focus items',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_compress',
+        description: 'Compress context/tool output with reversible SHA-256 recovery handle',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            text: { type: 'string', description: 'Content to compress' },
+            intensity: { type: 'string', enum: ['LITE', 'BALANCED', 'ULTRA'], description: 'Compression intensity' },
+          },
+          required: ['text'],
+        },
+      },
+      {
+        name: 'fusion_crush',
+        description: 'High-ratio tabular JSON compression with SmartCrusher (60-90% token reduction)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            data: { description: 'JSON object or array to compress' },
+            input: { description: 'Alias for data' },
+          },
+        },
+      },
+      {
+        name: 'fusion_fold',
+        description: 'Smart code indentation outline or selective unfolding to minimize token waste',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            code: { type: 'string', description: 'Code string to outline' },
+            filePath: { type: 'string', description: 'File path to read and outline' },
+            action: { type: 'string', enum: ['outline', 'unfold'] },
+            symbol: { type: 'string', description: 'Symbol to unfold if action is unfold' },
+          },
+        },
+      },
+      {
+        name: 'fusion_recover',
+        description: 'Restore byte-exact original payload from recovery handle (CF_REC_<hash>)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            handle: { type: 'string', description: 'Recovery handle string' },
+          },
+          required: ['handle'],
+        },
+      },
+      {
+        name: 'fusion_review',
+        description: 'Audit uncommitted git diff for overengineering and duplicate logic',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            diff: { type: 'string', description: 'Raw git diff text' },
+          },
+        },
+      },
+      {
+        name: 'fusion_audit',
+        description: 'Ponytail anti-overengineering scan on code (flags wrappers, speculative factories)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            code: { type: 'string', description: 'Code string to audit' },
+            filePath: { type: 'string', description: 'File path to audit' },
+          },
+        },
+      },
+      {
+        name: 'fusion_scorecard',
+        description: 'View Caveman token and dollar ROI scorecard',
+        inputSchema: { type: 'object', properties: {} },
+      },
+      {
+        name: 'fusion_doctor',
+        description: 'Run self-diagnostics on CortexForge components',
+        inputSchema: { type: 'object', properties: {} },
+      },
+    ];
   }
 
   public runStdio(): void {
@@ -197,45 +377,79 @@ export class McpServer {
         if (!line.trim()) continue;
         try {
           const req = JSON.parse(line);
-          if (req.method === 'tools/call') {
-            const result = this.handleToolCall(req.params.name, req.params.arguments);
-            process.stdout.write(
-              JSON.stringify({
-                jsonrpc: '2.0',
-                id: req.id,
-                result: { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] },
-              }) + '\n'
-            );
-          } else if (req.method === 'tools/list') {
+
+          // 1. MCP Lifecycle: initialize
+          if (req.method === 'initialize') {
+            const protocolVersion = req.params?.protocolVersion || '2024-11-05';
             process.stdout.write(
               JSON.stringify({
                 jsonrpc: '2.0',
                 id: req.id,
                 result: {
-                  tools: [
-                    { name: 'fusion_status', description: 'Show CortexForge status, host agent, and metrics' },
-                    { name: 'fusion_memory', description: 'Query or record persistent engineering memory (BM25 Hybrid)' },
-                    { name: 'fusion_graph', description: 'Query code symbols, call graph, and blast radius' },
-                    { name: 'fusion_path', description: 'Find shortest dependency/call path between two symbols' },
-                    { name: 'fusion_communities', description: 'Detect functional code clusters and communities' },
-                    { name: 'fusion_god_nodes', description: 'Identify architectural god nodes and hubs' },
-                    { name: 'fusion_cycles', description: 'Detect circular dependency loops in imports' },
-                    { name: 'fusion_drift', description: 'Audit architectural layers and detect dependency drift' },
-                    { name: 'fusion_architecture', description: 'Get source-backed architecture and Mermaid maps' },
-                    { name: 'fusion_timeline', description: 'Get chronological engineering decision timeline' },
-                    { name: 'fusion_briefing', description: 'Get session start context briefing of project' },
-                    { name: 'fusion_compress', description: 'Compress context/tool output with recovery handle' },
-                    { name: 'fusion_crush', description: 'High-ratio tabular JSON compression with SmartCrusher' },
-                    { name: 'fusion_fold', description: 'Smart code syntax outline or selective unfolding' },
-                    { name: 'fusion_recover', description: 'Restore original payload from recovery handle' },
-                    { name: 'fusion_review', description: 'Audit git diff for overengineering and duplicate logic' },
-                    { name: 'fusion_audit', description: 'Ponytail anti-overengineering scan on code' },
-                    { name: 'fusion_scorecard', description: 'View Caveman token and dollar ROI scorecard' },
-                    { name: 'fusion_intercept_pre', description: 'Validate command safety and inject proactive memories' },
-                    { name: 'fusion_intercept_post', description: 'Diagnose tool errors and compress output' },
-                    { name: 'fusion_doctor', description: 'Run self-diagnostics on CortexForge components' },
-                    { name: 'fusion_learn', description: 'Inspect or apply self-improving policies' },
-                  ],
+                  protocolVersion,
+                  capabilities: {
+                    tools: {
+                      listChanged: false,
+                    },
+                  },
+                  serverInfo: {
+                    name: 'cortexforge',
+                    version: '1.0.0',
+                  },
+                },
+              }) + '\n'
+            );
+          }
+          // 2. MCP Lifecycle: notifications/initialized
+          else if (req.method === 'notifications/initialized') {
+            // Client acknowledgement notification - no response required
+          }
+          // 3. MCP Lifecycle: ping
+          else if (req.method === 'ping') {
+            process.stdout.write(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: req.id,
+                result: {},
+              }) + '\n'
+            );
+          }
+          // 4. MCP Tools: list
+          else if (req.method === 'tools/list') {
+            process.stdout.write(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: req.id,
+                result: {
+                  tools: this.getToolsList(),
+                },
+              }) + '\n'
+            );
+          }
+          // 5. MCP Tools: call
+          else if (req.method === 'tools/call') {
+            const toolName = req.params?.name;
+            const toolArgs = req.params?.arguments || {};
+            const result = this.handleToolCall(toolName, toolArgs);
+            process.stdout.write(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: req.id,
+                result: {
+                  content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+                },
+              }) + '\n'
+            );
+          }
+          // 6. Unknown method with id
+          else if (req.id !== undefined) {
+            process.stdout.write(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: req.id,
+                error: {
+                  code: -32601,
+                  message: `Method '${req.method}' not implemented`,
                 },
               }) + '\n'
             );
