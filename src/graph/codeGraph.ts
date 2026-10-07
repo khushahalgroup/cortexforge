@@ -47,6 +47,7 @@ export class CodeGraph {
       for (const edge of edges) {
         this.db.addEdge(edge);
       }
+      this.db.persist();
     } catch (err) {
       console.warn(`[CodeGraph] Failed to index file ${relPath}:`, err);
     }
@@ -82,6 +83,7 @@ export class CodeGraph {
     if (fs.existsSync(dirPath)) {
       walk(dirPath);
     }
+    this.db.persist();
   }
 
   public querySymbol(symbolName: string): {

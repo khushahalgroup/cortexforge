@@ -59,6 +59,12 @@ export class CliCommands {
     await worker.start();
   }
 
+  public static async stop(): Promise<void> {
+    const worker = new CortexWorker();
+    worker.stop();
+    console.log('[OK] CortexForge worker stopped.');
+  }
+
   public static async benchmark(): Promise<void> {
     console.log('\n========================================================================================');
     console.log('                      CORTEXFORGE REPRODUCIBLE BENCHMARK SUITE                          ');

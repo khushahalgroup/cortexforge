@@ -123,6 +123,12 @@ export class CortexWorker {
     }
     if (fs.existsSync(this.pidFilePath)) {
       try {
+        const pid = parseInt(fs.readFileSync(this.pidFilePath, 'utf-8').trim(), 10);
+        if (pid && pid !== process.pid) {
+          process.kill(pid);
+        }
+      } catch {}
+      try {
         fs.unlinkSync(this.pidFilePath);
       } catch {}
     }
@@ -135,6 +141,9 @@ export class CortexWorker {
       process.kill(pid, 0);
       return true;
     } catch {
+      try {
+        fs.unlinkSync(this.pidFilePath);
+      } catch {}
       return false;
     }
   }

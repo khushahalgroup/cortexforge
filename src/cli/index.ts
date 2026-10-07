@@ -13,6 +13,9 @@ export async function runCli(args: string[]): Promise<void> {
     case 'start':
       await CliCommands.start();
       break;
+    case 'stop':
+      await CliCommands.stop();
+      break;
     case 'benchmark':
       await CliCommands.benchmark();
       break;
@@ -53,7 +56,7 @@ export async function runCli(args: string[]): Promise<void> {
       break;
     default:
       console.log(`Unknown command '${command}'. Available commands:`);
-      console.log('  status, doctor, start, benchmark, graph, god-nodes, cycles, blast-radius, architecture, review, recover, install, uninstall');
+      console.log('  status, doctor, start, stop, benchmark, graph, god-nodes, cycles, blast-radius, architecture, review, recover, install, uninstall');
       break;
   }
 }
