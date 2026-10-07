@@ -87,6 +87,9 @@ export async function runCli(args: string[]): Promise<void> {
     case 'scorecard':
       await CliCommands.scorecard();
       break;
+    case 'memory':
+      await CliCommands.memory(args[1]);
+      break;
     case 'install':
       await CliCommands.install();
       break;
@@ -95,7 +98,7 @@ export async function runCli(args: string[]): Promise<void> {
       break;
     default:
       console.log(`Unknown command '${command}'. Available commands:`);
-      console.log('  status, doctor, start, stop, benchmark, graph, communities, path, god-nodes, cycles, drift, blast-radius, architecture, timeline, briefing, audit, fold, crush, scorecard, review, recover, install, uninstall');
+      console.log('  status, doctor, start, stop, benchmark, graph, memory, communities, path, god-nodes, cycles, drift, blast-radius, architecture, timeline, briefing, audit, fold, crush, scorecard, review, recover, install, uninstall');
       break;
   }
 }

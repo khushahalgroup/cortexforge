@@ -115,6 +115,23 @@ export class CliCommands {
     console.table(godNodes);
   }
 
+  public static async memory(query?: string): Promise<void> {
+    const memEngine = new MemoryEngine(this.db);
+    if (!query) {
+      const all = this.db.getAllMemories();
+      console.log(`\nStored Engineering Memories (${all.length}):`);
+      for (const m of all) {
+        console.log(`[${m.evidence}] ${m.topic}: ${m.summary}`);
+      }
+    } else {
+      const results = memEngine.query(query, 0.1, 10);
+      console.log(`\nMemory Search Results for '${query}' (${results.length} matches):`);
+      for (const m of results) {
+        console.log(`[${m.evidence}] ${m.topic}: ${m.summary}`);
+      }
+    }
+  }
+
   public static async cycles(): Promise<void> {
     const graph = new CodeGraph(this.db);
     const cycles = graph.detectCircularDependencies();

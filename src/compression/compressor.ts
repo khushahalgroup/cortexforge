@@ -1,7 +1,7 @@
 import { RecoveryStore } from './recoveryStore.ts';
 import { SmartCrusher } from '../context/smartCrusher.ts';
 import { CodeFolder } from './codeFolder.ts';
-import type { CortexDatabase } from '../storage/database.ts';
+import { CortexDatabase } from '../storage/database.ts';
 
 export type CompressionIntensity = 'SAFE' | 'BALANCED' | 'AGGRESSIVE' | 'ULTRA' | 'AUTO';
 
@@ -28,8 +28,9 @@ export class ContextCompressor {
   private totalCompressions = 0;
   private totalBytesSaved = 0;
 
-  constructor(db: CortexDatabase) {
-    this.recoveryStore = new RecoveryStore(db);
+  constructor(db?: CortexDatabase) {
+    const activeDb = db || new CortexDatabase();
+    this.recoveryStore = new RecoveryStore(activeDb);
   }
 
   public compress(
