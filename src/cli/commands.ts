@@ -11,6 +11,10 @@ import { DiffOptimizer } from '../minimalism/diffOptimizer.ts';
 import { BenchmarkSuite } from '../benchmark/benchmarkSuite.ts';
 import { CortexWorker } from '../server/worker.ts';
 import { ContextCompressor } from '../compression/compressor.ts';
+import { ArchitectureDrift } from '../architecture/archDrift.ts';
+import { OverengineeringAuditor } from '../minimalism/overengineeringAuditor.ts';
+import { CodeFolder } from '../compression/codeFolder.ts';
+import { SmartCrusher } from '../context/smartCrusher.ts';
 
 export class CliCommands {
   private static db = new CortexDatabase();
@@ -168,6 +172,117 @@ export class CliCommands {
     } else {
       console.error(`Recovery failed: ${res.error}`);
     }
+  }
+
+  public static async path(source: string, target: string): Promise<void> {
+    const graph = new CodeGraph(this.db);
+    const res = graph.findShortestPath(source, target);
+    console.log(`\n${res.summary}\n`);
+    if (res.path.length > 0) {
+      console.table(res.path);
+    }
+  }
+
+  public static async communities(): Promise<void> {
+    const graph = new CodeGraph(this.db);
+    const comms = graph.detectCommunities();
+    console.log(`\nDetected ${comms.length} Functional Code Communities:\n`);
+    console.table(
+      comms.map((c) => ({
+        ID: c.id,
+        Name: c.name,
+        Symbols: c.nodeCount,
+        Density: c.densityScore,
+        TopSymbols: c.symbols.slice(0, 3).join(', '),
+      }))
+    );
+  }
+
+  public static async drift(): Promise<void> {
+    const drift = new ArchitectureDrift(this.db);
+    const rep = drift.auditDrift();
+    console.log(`\nArchitecture Layer Drift Score: ${rep.driftScore}% (${rep.isCompliant ? 'COMPLIANT' : 'VIOLATIONS DETECTED'})`);
+    console.log(`Audited ${rep.totalEdgesChecked} import dependencies across architectural layers.`);
+    if (rep.violations.length > 0) {
+      console.log(`\nFound ${rep.violations.length} architectural drift violations:`);
+      console.table(rep.violations);
+    } else {
+      console.log('\n[PASS] All code dependencies strictly adhere to downward layering architecture.\n');
+    }
+  }
+
+  public static async timeline(): Promise<void> {
+    const mem = new MemoryEngine(this.db);
+    const tl = mem.getTimeline();
+    console.log(`\n=== CortexForge Chronological Decision Timeline (${tl.length} memories) ===\n`);
+    for (const t of tl) {
+      console.log(`[${t.date.slice(0, 10)}] [${t.evidence}] ${t.topic}: ${t.summary}`);
+    }
+    console.log('');
+  }
+
+  public static async briefing(): Promise<void> {
+    const mem = new MemoryEngine(this.db);
+    const b = mem.getSessionBriefing();
+    console.log(`\n${b.briefingSummary}\n`);
+  }
+
+  public static async audit(filePath?: string): Promise<void> {
+    const auditor = new OverengineeringAuditor(this.db);
+    let code = '';
+    const target = filePath || 'src/index.ts';
+    if (fs.existsSync(target)) {
+      code = fs.readFileSync(target, 'utf-8');
+    } else {
+      code = 'export class PassthroughWrapper { doWork() { return this.worker.doWork(); } }';
+    }
+    const res = auditor.auditCode(code, target);
+    console.log(`\n=== Ponytail Anti-Overengineering Scoreboard ===`);
+    console.log(`Total Smells: ${res.totalSmells} | LOC Avoidable: ~${res.locAvoided} | Duplicate Utilities: ${res.duplicateUtilitiesFound}\n`);
+    if (res.smells.length > 0) {
+      console.table(res.smells);
+    } else {
+      console.log('[PASS] Codebase adheres to strict minimalism standards. Zero premature abstractions.\n');
+    }
+  }
+
+  public static async fold(filePath: string, symbol?: string): Promise<void> {
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return;
+    }
+    const code = fs.readFileSync(filePath, 'utf-8');
+    if (symbol) {
+      console.log(`\nUnfolding '${symbol}' in ${filePath}:`);
+      console.log(CodeFolder.smartUnfold(code, symbol));
+    } else {
+      const res = CodeFolder.smartOutline(code);
+      console.log(`\nStructural Outline of ${filePath} (${res.tokensSavedPercentage}% tokens saved, ${res.symbolsFound.length} symbols):\n`);
+      console.log(res.outlinedCode);
+    }
+  }
+
+  public static async crush(filePath: string): Promise<void> {
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return;
+    }
+    const text = fs.readFileSync(filePath, 'utf-8');
+    const res = SmartCrusher.crush(text);
+    console.log(`\nSmartCrusher Result: ${res.savedPercentage}% tokens saved (${res.originalBytes}B -> ${res.crushedBytes}B)`);
+    console.log(res.crushedString);
+  }
+
+  public static async scorecard(): Promise<void> {
+    const comp = new ContextCompressor(this.db);
+    const sc = comp.getCaveScorecard();
+    console.log(`\n=== Caveman Token & Dollar ROI Scoreboard ===`);
+    console.log(`Cave Score:                  ${sc.caveScore} / 100`);
+    console.log(`Total Invocations:          ${sc.totalCompressions}`);
+    console.log(`Cumulative Tokens Saved:    ${sc.totalTokensSaved}`);
+    console.log(`Cumulative Bytes Saved:     ${sc.totalBytesSaved}`);
+    console.log(`Avg Compression Efficiency: ${sc.averageCompressionRatio}%`);
+    console.log(`Estimated Cost Avoidance:   $${sc.estimatedCostSavingsUsd} USD\n`);
   }
 
   public static async install(): Promise<void> {

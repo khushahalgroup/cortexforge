@@ -8,6 +8,10 @@ import { DiffOptimizer } from '../minimalism/diffOptimizer.ts';
 import { SelfOptimizer } from '../learning/selfOptimizer.ts';
 import { AgentDetector } from '../detector/agentDetector.ts';
 import { AgentInterceptor } from '../interceptor/agentInterceptor.ts';
+import { ArchitectureDrift } from '../architecture/archDrift.ts';
+import { OverengineeringAuditor } from '../minimalism/overengineeringAuditor.ts';
+import { SmartCrusher } from '../context/smartCrusher.ts';
+import { CodeFolder } from '../compression/codeFolder.ts';
 
 export class McpServer {
   private db: CortexDatabase;
@@ -134,6 +138,47 @@ export class McpServer {
         return { patterns: this.selfOptimizer.analyzeRecentPatterns() };
       }
 
+      case 'fusion_path': {
+        return this.graph.findShortestPath(args.source || '', args.target || '');
+      }
+
+      case 'fusion_communities': {
+        return { communities: this.graph.detectCommunities() };
+      }
+
+      case 'fusion_drift': {
+        const drift = new ArchitectureDrift(this.db);
+        return drift.auditDrift();
+      }
+
+      case 'fusion_timeline': {
+        return { timeline: this.memory.getTimeline() };
+      }
+
+      case 'fusion_briefing': {
+        return this.memory.getSessionBriefing();
+      }
+
+      case 'fusion_crush': {
+        return SmartCrusher.crush(args.input);
+      }
+
+      case 'fusion_fold': {
+        if (args.action === 'unfold' && args.symbol) {
+          return { code: CodeFolder.smartUnfold(args.code || '', args.symbol) };
+        }
+        return CodeFolder.smartOutline(args.code || '');
+      }
+
+      case 'fusion_audit': {
+        const auditor = new OverengineeringAuditor(this.db);
+        return auditor.auditCode(args.code || '', args.fileName || 'snippet');
+      }
+
+      case 'fusion_scorecard': {
+        return this.compressor.getCaveScorecard();
+      }
+
       default:
         return { error: `Tool '${name}' not recognized.` };
     }
@@ -171,12 +216,21 @@ export class McpServer {
                     { name: 'fusion_status', description: 'Show CortexForge status, host agent, and metrics' },
                     { name: 'fusion_memory', description: 'Query or record persistent engineering memory (BM25 Hybrid)' },
                     { name: 'fusion_graph', description: 'Query code symbols, call graph, and blast radius' },
+                    { name: 'fusion_path', description: 'Find shortest dependency/call path between two symbols' },
+                    { name: 'fusion_communities', description: 'Detect functional code clusters and communities' },
                     { name: 'fusion_god_nodes', description: 'Identify architectural god nodes and hubs' },
                     { name: 'fusion_cycles', description: 'Detect circular dependency loops in imports' },
+                    { name: 'fusion_drift', description: 'Audit architectural layers and detect dependency drift' },
                     { name: 'fusion_architecture', description: 'Get source-backed architecture and Mermaid maps' },
+                    { name: 'fusion_timeline', description: 'Get chronological engineering decision timeline' },
+                    { name: 'fusion_briefing', description: 'Get session start context briefing of project' },
                     { name: 'fusion_compress', description: 'Compress context/tool output with recovery handle' },
+                    { name: 'fusion_crush', description: 'High-ratio tabular JSON compression with SmartCrusher' },
+                    { name: 'fusion_fold', description: 'Smart code syntax outline or selective unfolding' },
                     { name: 'fusion_recover', description: 'Restore original payload from recovery handle' },
                     { name: 'fusion_review', description: 'Audit git diff for overengineering and duplicate logic' },
+                    { name: 'fusion_audit', description: 'Ponytail anti-overengineering scan on code' },
+                    { name: 'fusion_scorecard', description: 'View Caveman token and dollar ROI scorecard' },
                     { name: 'fusion_intercept_pre', description: 'Validate command safety and inject proactive memories' },
                     { name: 'fusion_intercept_post', description: 'Diagnose tool errors and compress output' },
                     { name: 'fusion_doctor', description: 'Run self-diagnostics on CortexForge components' },

@@ -56,4 +56,35 @@ export class ArchitectureVisualizer {
 
     return lines.join('\n');
   }
+
+  public static generateSequenceDiagram(model: IArchitectureModel): string {
+    const lines: string[] = ['sequenceDiagram', '  autonumber'];
+
+    for (const b of model.boundaries) {
+      lines.push(`  participant ${b.name.replace(/\s+/g, '_')} as ${b.name}`);
+    }
+
+    for (const df of model.dataflows) {
+      const from = df.from.replace(/\s+/g, '_');
+      const to = df.to.replace(/\s+/g, '_');
+      lines.push(`  ${from}->>${to}: invoke [${df.protocol}]`);
+      lines.push(`  ${to}-->>${from}: acknowledge / return data`);
+    }
+
+    return lines.join('\n');
+  }
+
+  public static generateBlastRadiusMermaid(targetSymbol: string, affectedSymbols: string[]): string {
+    const lines: string[] = ['graph LR'];
+    lines.push(`  target["🎯 TARGET: ${targetSymbol}"]:::targetNode`);
+
+    for (let i = 0; i < affectedSymbols.length; i++) {
+      const sym = affectedSymbols[i].replace(/^node_|^file_/, '');
+      lines.push(`  node_${i}["⚠️ ${sym}"]`);
+      lines.push(`  target --> node_${i}`);
+    }
+
+    lines.push('  classDef targetNode fill:#ef4444,stroke:#b91c1c,color:#fff,stroke-width:2px;');
+    return lines.join('\n');
+  }
 }

@@ -48,6 +48,45 @@ export async function runCli(args: string[]): Promise<void> {
       }
       await CliCommands.recover(args[1]);
       break;
+    case 'path':
+      if (!args[1] || !args[2]) {
+        console.error('Usage: cortexforge path <SOURCE_SYMBOL> <TARGET_SYMBOL>');
+        process.exit(1);
+      }
+      await CliCommands.path(args[1], args[2]);
+      break;
+    case 'communities':
+      await CliCommands.communities();
+      break;
+    case 'drift':
+      await CliCommands.drift();
+      break;
+    case 'timeline':
+      await CliCommands.timeline();
+      break;
+    case 'briefing':
+      await CliCommands.briefing();
+      break;
+    case 'audit':
+      await CliCommands.audit(args[1]);
+      break;
+    case 'fold':
+      if (!args[1]) {
+        console.error('Usage: cortexforge fold <FILE_PATH> [SYMBOL]');
+        process.exit(1);
+      }
+      await CliCommands.fold(args[1], args[2]);
+      break;
+    case 'crush':
+      if (!args[1]) {
+        console.error('Usage: cortexforge crush <JSON_FILE_PATH>');
+        process.exit(1);
+      }
+      await CliCommands.crush(args[1]);
+      break;
+    case 'scorecard':
+      await CliCommands.scorecard();
+      break;
     case 'install':
       await CliCommands.install();
       break;
@@ -56,7 +95,7 @@ export async function runCli(args: string[]): Promise<void> {
       break;
     default:
       console.log(`Unknown command '${command}'. Available commands:`);
-      console.log('  status, doctor, start, stop, benchmark, graph, god-nodes, cycles, blast-radius, architecture, review, recover, install, uninstall');
+      console.log('  status, doctor, start, stop, benchmark, graph, communities, path, god-nodes, cycles, drift, blast-radius, architecture, timeline, briefing, audit, fold, crush, scorecard, review, recover, install, uninstall');
       break;
   }
 }

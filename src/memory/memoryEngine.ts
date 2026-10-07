@@ -124,4 +124,67 @@ export class MemoryEngine {
   public getAllActive(): IMemoryRecord[] {
     return this.db.getAllMemories().filter((m) => !m.isDeprecated);
   }
+
+  public getTimeline(): Array<{
+    id: string;
+    topic: string;
+    summary: string;
+    date: string;
+    evidence: string;
+    importance: number;
+    relatedSymbols: string[];
+  }> {
+    const memories = this.getAllActive();
+    return memories
+      .sort((a, b) => a.recency - b.recency)
+      .map((m) => ({
+        id: m.id,
+        topic: m.topic,
+        summary: m.summary,
+        date: new Date(m.recency).toISOString(),
+        evidence: m.evidence,
+        importance: m.importance,
+        relatedSymbols: m.relatedSymbols,
+      }));
+  }
+
+  public getSessionBriefing(): {
+    projectName: string;
+    totalMemories: number;
+    keyFacts: string[];
+    topDecisions: string[];
+    briefingSummary: string;
+  } {
+    const project = this.db.getProject();
+    const projectName = project ? project.projectName : 'cortexforge';
+    const active = this.getAllActive();
+
+    const keyFacts = active
+      .filter((m) => m.evidence === 'FACT')
+      .slice(-5)
+      .map((m) => `[FACT] ${m.topic}: ${m.summary}`);
+
+    const topDecisions = active
+      .filter((m) => m.importance >= 0.8)
+      .slice(-5)
+      .map((m) => `[DECISION] ${m.topic}: ${m.summary}`);
+
+    const briefingSummary = [
+      `=== CORTEXFORGE COLD-START BRIEFING ===`,
+      `Project: ${projectName} | Active Memories: ${active.length}`,
+      keyFacts.length > 0 ? `Core Facts:\n${keyFacts.join('\n')}` : '',
+      topDecisions.length > 0 ? `Critical Decisions:\n${topDecisions.join('\n')}` : '',
+      `=======================================`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    return {
+      projectName,
+      totalMemories: active.length,
+      keyFacts,
+      topDecisions,
+      briefingSummary,
+    };
+  }
 }

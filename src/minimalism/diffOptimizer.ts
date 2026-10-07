@@ -1,4 +1,5 @@
 import type { CortexDatabase } from '../storage/database.ts';
+import { OverengineeringAuditor, type IPonytailScoreboard } from './overengineeringAuditor.ts';
 
 export interface IDiffReviewFinding {
   type: 'DUPLICATE_LOGIC' | 'OVERENGINEERING' | 'UNUSED_ABSTRACTION' | 'DEAD_CODE' | 'COMPLEXITY_SPIKE';
@@ -105,5 +106,10 @@ export class DiffOptimizer {
       findings,
       summaryMessage,
     };
+  }
+
+  public auditFile(code: string, fileName: string = 'unknown') {
+    const auditor = new OverengineeringAuditor(this.db);
+    return auditor.auditCode(code, fileName);
   }
 }

@@ -1,7 +1,9 @@
 import { RecoveryStore } from './recoveryStore.ts';
+import { SmartCrusher } from '../context/smartCrusher.ts';
+import { CodeFolder } from './codeFolder.ts';
 import type { CortexDatabase } from '../storage/database.ts';
 
-export type CompressionIntensity = 'SAFE' | 'BALANCED' | 'AGGRESSIVE' | 'AUTO';
+export type CompressionIntensity = 'SAFE' | 'BALANCED' | 'AGGRESSIVE' | 'ULTRA' | 'AUTO';
 
 export interface ICompressionResult {
   compressed: string;
@@ -12,8 +14,19 @@ export interface ICompressionResult {
   strategy: string;
 }
 
+export interface ICaveScorecard {
+  totalCompressions: number;
+  totalTokensSaved: number;
+  totalBytesSaved: number;
+  averageCompressionRatio: number;
+  estimatedCostSavingsUsd: number;
+  caveScore: number;
+}
+
 export class ContextCompressor {
   private recoveryStore: RecoveryStore;
+  private totalCompressions = 0;
+  private totalBytesSaved = 0;
 
   constructor(db: CortexDatabase) {
     this.recoveryStore = new RecoveryStore(db);
@@ -21,7 +34,7 @@ export class ContextCompressor {
 
   public compress(
     rawText: string,
-    typeHint?: 'json' | 'log' | 'test' | 'diff' | 'auto',
+    typeHint?: 'json' | 'log' | 'test' | 'diff' | 'code' | 'auto',
     intensity: CompressionIntensity = 'BALANCED'
   ): ICompressionResult {
     const originalBytes = Buffer.byteLength(rawText, 'utf-8');
@@ -47,6 +60,9 @@ export class ContextCompressor {
         case 'json':
           compressed = this.compressJson(rawText, intensity);
           break;
+        case 'code':
+          compressed = CodeFolder.smartOutline(rawText).outlinedCode;
+          break;
         case 'test':
           compressed = this.compressTestOutput(rawText, intensity);
           break;
@@ -62,6 +78,9 @@ export class ContextCompressor {
       const compressedBytes = Buffer.byteLength(compressed, 'utf-8');
       const savedBytes = Math.max(0, originalBytes - compressedBytes);
       const savedPercentage = Math.round((savedBytes / originalBytes) * 100);
+
+      this.totalCompressions++;
+      this.totalBytesSaved += savedBytes;
 
       // Register with Recovery Store if we modified the content
       const { handle } = this.recoveryStore.store(rawText, strategy, compressedBytes);
@@ -94,7 +113,26 @@ export class ContextCompressor {
     return this.recoveryStore.recover(handle);
   }
 
-  private detectType(text: string): 'json' | 'test' | 'diff' | 'log' {
+  public getCaveScorecard(): ICaveScorecard {
+    const tokensSaved = Math.round(this.totalBytesSaved / 4);
+    const costSaved = parseFloat(((tokensSaved / 1_000_000) * 3.0).toFixed(4));
+    const avgRatio =
+      this.totalCompressions > 0
+        ? Math.min(95, Math.round((this.totalBytesSaved / (this.totalBytesSaved + 1000)) * 100))
+        : 0;
+    const caveScore = Math.min(100, Math.round(avgRatio * 0.7 + Math.min(30, this.totalCompressions * 2)));
+
+    return {
+      totalCompressions: this.totalCompressions,
+      totalTokensSaved: tokensSaved,
+      totalBytesSaved: this.totalBytesSaved,
+      averageCompressionRatio: avgRatio,
+      estimatedCostSavingsUsd: costSaved,
+      caveScore,
+    };
+  }
+
+  private detectType(text: string): 'json' | 'test' | 'diff' | 'code' | 'log' {
     const trimmed = text.trim();
     if (
       (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
@@ -114,21 +152,38 @@ export class ContextCompressor {
     ) {
       return 'test';
     }
+    if (
+      trimmed.startsWith('import ') ||
+      trimmed.startsWith('export ') ||
+      (trimmed.includes('function ') && trimmed.includes('{')) ||
+      (trimmed.includes('class ') && trimmed.includes('{'))
+    ) {
+      return 'code';
+    }
     return 'log';
   }
 
   private compressJson(rawJson: string, _intensity: CompressionIntensity): string {
-    try {
-      const parsed = JSON.parse(rawJson);
-      // Minify and eliminate null or empty values
-      return JSON.stringify(parsed);
-    } catch {
-      return rawJson;
-    }
+    const crushed = SmartCrusher.crush(rawJson);
+    return crushed.crushedString;
   }
 
   private compressTerminalLog(log: string, intensity: CompressionIntensity): string {
     const lines = log.split(/\r?\n/);
+
+    if (intensity === 'ULTRA') {
+      const ultraLines = lines.filter(
+        (l) =>
+          l.includes('Error') ||
+          l.includes('FAIL') ||
+          l.includes('exit code') ||
+          l.includes('at ') ||
+          l.includes('warning') ||
+          l.match(/[a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+:\d+/)
+      );
+      return ultraLines.length > 0 ? ultraLines.join('\n') : lines.slice(0, 5).join('\n');
+    }
+
     const retainedLines: string[] = [];
     let foldedNoiseCount = 0;
 

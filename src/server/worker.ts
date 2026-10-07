@@ -9,6 +9,7 @@ import { ArchitectureModel } from '../architecture/archModel.ts';
 import { ArchitectureVisualizer } from '../architecture/visualizer.ts';
 import { AgentDetector } from '../detector/agentDetector.ts';
 import { renderDashboardHtml } from './dashboardHtml.ts';
+import { ArchitectureDrift } from '../architecture/archDrift.ts';
 
 export class CortexWorker {
   private server?: http.Server;
@@ -46,6 +47,10 @@ export class CortexWorker {
         const mermaid = ArchitectureVisualizer.generateMermaid(archModel);
         const godNodes = this.graph.detectGodNodes(2).slice(0, 6);
         const recentMemories = this.memory.getAllActive().slice(-5).reverse();
+        const communities = this.graph.detectCommunities().slice(0, 8);
+        const drift = new ArchitectureDrift(this.db);
+        const driftReport = drift.auditDrift();
+        const scorecard = this.compressor.getCaveScorecard();
 
         const html = renderDashboardHtml({
           projectName: detection.projectProfile.projectName,
@@ -56,6 +61,18 @@ export class CortexWorker {
           godNodes,
           recentMemories,
           mermaidGraph: mermaid,
+          communities,
+          driftReport: {
+            isCompliant: driftReport.isCompliant,
+            driftScore: driftReport.driftScore,
+            totalEdgesChecked: driftReport.totalEdgesChecked,
+            violationsCount: driftReport.violations.length,
+          },
+          scorecard: {
+            caveScore: scorecard.caveScore,
+            totalTokensSaved: scorecard.totalTokensSaved,
+            estimatedCostSavingsUsd: scorecard.estimatedCostSavingsUsd,
+          },
         });
 
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -96,6 +113,35 @@ export class CortexWorker {
       if (url === '/api/god-nodes') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(this.graph.detectGodNodes(1)));
+        return;
+      }
+
+      // 5. API Communities
+      if (url === '/api/communities') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.graph.detectCommunities()));
+        return;
+      }
+
+      // 6. API Architecture Drift
+      if (url === '/api/drift') {
+        const drift = new ArchitectureDrift(this.db);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(drift.auditDrift()));
+        return;
+      }
+
+      // 7. API Timeline
+      if (url === '/api/timeline') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.memory.getTimeline()));
+        return;
+      }
+
+      // 8. API Scorecard
+      if (url === '/api/scorecard') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.compressor.getCaveScorecard()));
         return;
       }
 

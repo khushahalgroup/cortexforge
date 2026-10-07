@@ -3,6 +3,7 @@ import { MemoryEngine } from '../memory/memoryEngine.ts';
 import { ContextCompressor } from '../compression/compressor.ts';
 import { SecretRedactor } from '../security/secretRedactor.ts';
 import { ErrorIntelligence } from '../errors/errorIntelligence.ts';
+import { ObservationExtractor } from '../memory/observationExtractor.ts';
 
 export interface IPreToolResult {
   allowed: boolean;
@@ -106,6 +107,21 @@ export class AgentInterceptor {
       tokensSaved,
       status: 'success',
     });
+
+    // 3. Automatic Observation Extraction (Claude-Mem)
+    try {
+      const obs = ObservationExtractor.extract(toolName, {}, rawOutput);
+      if (obs) {
+        this.memory.recordDecision(
+          obs.topic,
+          obs.summary,
+          obs.details,
+          obs.relatedSymbols,
+          obs.evidence,
+          obs.importance
+        );
+      }
+    } catch {}
 
     const finalOutput = diagnostics
       ? `${diagnostics}\n\n${compResult.compressed}`

@@ -86,4 +86,36 @@ export class ContextPlanner {
     // Standard rule of thumb: ~4 characters per token
     return Math.ceil(text.length / 4);
   }
+
+  public calculateHeadroom(consumedTokens: number, windowLimit: number = 128000): {
+    consumedTokens: number;
+    windowLimit: number;
+    headroomTokens: number;
+    headroomPercentage: number;
+    status: 'HEALTHY' | 'WARNING' | 'CRITICAL';
+    recommendation: string;
+  } {
+    const headroomTokens = Math.max(0, windowLimit - consumedTokens);
+    const headroomPercentage = Math.round((headroomTokens / windowLimit) * 100);
+
+    let status: 'HEALTHY' | 'WARNING' | 'CRITICAL' = 'HEALTHY';
+    let recommendation = 'Headroom sufficient. Continue standard agent execution.';
+
+    if (headroomPercentage < 15) {
+      status = 'CRITICAL';
+      recommendation = 'CRITICAL HEADROOM: Context window near saturation (>85%). Apply ULTRA compression and summarize session immediately.';
+    } else if (headroomPercentage < 30) {
+      status = 'WARNING';
+      recommendation = 'HEADROOM WARNING: Context window >70% full. Fold code bodies with Smart Outline and crush JSON outputs.';
+    }
+
+    return {
+      consumedTokens,
+      windowLimit,
+      headroomTokens,
+      headroomPercentage,
+      status,
+      recommendation,
+    };
+  }
 }

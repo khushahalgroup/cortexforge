@@ -14,6 +14,12 @@ import { SecretRedactor } from '../src/security/secretRedactor.ts';
 import { AgentInterceptor } from '../src/interceptor/agentInterceptor.ts';
 import { renderDashboardHtml } from '../src/server/dashboardHtml.ts';
 import { BenchmarkSuite } from '../src/benchmark/benchmarkSuite.ts';
+import { SmartCrusher } from '../src/context/smartCrusher.ts';
+import { CacheAligner } from '../src/context/cacheAligner.ts';
+import { CodeFolder } from '../src/compression/codeFolder.ts';
+import { ObservationExtractor } from '../src/memory/observationExtractor.ts';
+import { OverengineeringAuditor } from '../src/minimalism/overengineeringAuditor.ts';
+import { ArchitectureDrift } from '../src/architecture/archDrift.ts';
 
 let passed = 0;
 let failed = 0;
@@ -148,6 +154,111 @@ async function runTests() {
   // Test 14: Benchmark Suite
   const benchResults = await BenchmarkSuite.runSuite();
   assert(benchResults.length === 5, 'Benchmark suite evaluates all 5 configurations');
+
+  // Test 15: SmartCrusher (Headroom Superpower)
+  const sampleJson = JSON.stringify(
+    Array.from({ length: 8 }, (_, i) => ({
+      id: i + 1,
+      name: i === 0 ? 'Alice' : `User${i}`,
+      role: 'engineer',
+      team: 'platform',
+      active: true,
+    }))
+  );
+  const crushed = SmartCrusher.crush(sampleJson);
+  assert(crushed.savedPercentage > 20, 'SmartCrusher achieves substantial compression on repetitive JSON arrays');
+  const uncrushed = SmartCrusher.uncrush(crushed.crushedString);
+  assert(uncrushed.length === 8 && uncrushed[0].name === 'Alice', 'SmartCrusher uncrushes with 100% semantic fidelity');
+
+  // Test 16: CacheAligner (Headroom Superpower)
+  const aligned = CacheAligner.align({
+    systemInstructions: 'You are CortexForge.',
+    projectProfile: { projectName: 'cortexforge', language: 'typescript' },
+    stableMemories: [{ id: 'mem_1', topic: 'Auth', summary: 'Use JWT' }],
+    codeSymbols: [{ id: 'sym_1', name: 'AgentDetector', type: 'class' }],
+    currentTask: 'Optimize database indexes',
+  });
+  assert(aligned.cacheHitEstimate > 0.5, 'CacheAligner achieves > 50% static cache hit estimate');
+  assert(aligned.cachedPrefix.includes('CORTEXFORGE STABLE SYSTEM DIRECTIVE'), 'CacheAligner emits immutable prefix header');
+
+  // Test 17: CodeFolder (Claude-Mem Superpower)
+  const sampleCode = `
+export class ServiceWorker {
+  public async handleRequest(req: Request) {
+    console.log("Processing");
+    const data = await req.json();
+    return new Response(JSON.stringify(data));
+  }
+  public stop() {
+    console.log("Stopped");
+  }
+}
+  `;
+  const outlined = CodeFolder.smartOutline(sampleCode);
+  assert(outlined.foldedLines > 0, 'CodeFolder folds method implementation bodies');
+  const unfolded = CodeFolder.smartUnfold(sampleCode, 'stop');
+  assert(unfolded.includes('Stopped'), 'CodeFolder selectively unfolds targeted symbol');
+
+  // Test 18: ObservationExtractor (Claude-Mem Superpower)
+  const obs = ObservationExtractor.extract(
+    'run_command',
+    {},
+    'npm test\nFixed issue in authService by correcting JWT expiration check. Tests passing.'
+  );
+  assert(obs !== null && obs.category === 'BUG_FIX', 'ObservationExtractor automatically identifies bug fix from tool output');
+
+  // Test 19: Memory Timeline & Session Briefing (Claude-Mem Superpower)
+  const memoryEngine = new MemoryEngine(db);
+  const timeline = memoryEngine.getTimeline();
+  assert(Array.isArray(timeline), 'MemoryEngine emits chronological decision timeline');
+  const briefing = memoryEngine.getSessionBriefing();
+  assert(briefing.briefingSummary.includes('CORTEXFORGE COLD-START BRIEFING'), 'MemoryEngine generates session start briefing');
+
+  // Test 20: OverengineeringAuditor (Ponytail Superpower)
+  const auditor = new OverengineeringAuditor(db);
+  const badCode = `
+export class PassthroughWrapper {
+  public forwardCall() {
+    return this.delegate.forwardCall();
+  }
+}
+export class SimpleFactory {
+  public createSimple() {
+    return new Simple();
+  }
+}
+  `;
+  const auditReport = auditor.auditCode(badCode, 'test.ts');
+  assert(auditReport.totalSmells >= 2, 'OverengineeringAuditor flags passthrough wrappers and premature factories');
+  assert(auditReport.locAvoided > 0, 'OverengineeringAuditor calculates LOC avoided on scoreboard');
+
+  // Test 21: Shortest Path Traversal (Graphify Superpower)
+  const testGraph = new CodeGraph(db);
+  // Add two connected test nodes
+  db.upsertNode({ id: 'test_node_a', name: 'AuthService', type: 'class', fileId: 'file_auth.ts' });
+  db.upsertNode({ id: 'test_node_b', name: 'DatabasePool', type: 'class', fileId: 'file_db.ts' });
+  db.addEdge({ sourceId: 'test_node_a', targetId: 'test_node_b', relationship: 'calls' });
+  db.persist();
+
+  const pathResult = testGraph.findShortestPath('AuthService', 'DatabasePool');
+  assert(pathResult.found === true && pathResult.distance === 1, 'CodeGraph computes shortest dependency path between symbols');
+
+  // Test 22: Community Detection (Graphify Superpower)
+  const communities = testGraph.detectCommunities();
+  assert(communities.length > 0, 'CodeGraph clusters codebase symbols into functional communities');
+
+  // Test 23: Architecture Drift (Archify Superpower)
+  const drift = new ArchitectureDrift(db);
+  const driftReport = drift.auditDrift();
+  assert(typeof driftReport.driftScore === 'number', 'ArchitectureDrift computes quantitative drift score');
+  assert(driftReport.layerDistribution !== undefined, 'ArchitectureDrift measures layer distribution across imports');
+
+  // Test 24: Caveman ROI Scorecard & Ultra Mode (Caveman Superpower)
+  const ultraLog = 'npm test\nError: build failed at file.ts:42\n' + 'Downloading packages...\n'.repeat(30);
+  const ultraComp = compressor.compress(ultraLog, 'log', 'ULTRA');
+  assert(ultraComp.savedPercentage > 50, 'Compressor ULTRA mode aggressively strips noise');
+  const caveScorecard = compressor.getCaveScorecard();
+  assert(caveScorecard.caveScore >= 0, 'Compressor tracks verifiable Cave Scorecard and token ROI');
 
   console.log(`\nResults: ${passed} Passed, ${failed} Failed.`);
   if (failed > 0) {

@@ -12,6 +12,9 @@ export function renderDashboardHtml(data: {
   godNodes: Array<{ name: string; totalConnections: number; type: string; inDegree?: number; outDegree?: number }>;
   recentMemories: Array<{ topic: string; summary: string; evidence: string; importance: number; details?: string }>;
   mermaidGraph: string;
+  communities?: Array<{ id: string; name: string; nodeCount: number; densityScore: number; symbols: string[] }>;
+  driftReport?: { isCompliant: boolean; driftScore: number; totalEdgesChecked: number; violationsCount: number };
+  scorecard?: { caveScore: number; totalTokensSaved: number; estimatedCostSavingsUsd: number };
 }): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -120,14 +123,28 @@ export function renderDashboardHtml(data: {
       <div class="stat-desc">Deterministic AST Symbols & Calls</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Persistent Engineering Memory</div>
+      <div class="stat-label">Persistent Memory</div>
       <div class="stat-value" style="color: #34d399;">${data.memoriesCount}</div>
-      <div class="stat-desc">BM25 Hybrid & Evidence-Ranked</div>
+      <div class="stat-desc">BM25 Hybrid & Timeline</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Architectural God Nodes</div>
       <div class="stat-value" style="color: #f59e0b;">${data.godNodes.length}</div>
       <div class="stat-desc">Key Centrality & System Hubs</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Architecture Drift</div>
+      <div class="stat-value" style="color: ${data.driftReport?.isCompliant ? '#10b981' : '#f59e0b'};">
+        ${data.driftReport ? `${data.driftReport.driftScore}%` : '0%'}
+      </div>
+      <div class="stat-desc">${data.driftReport?.isCompliant ? 'Clean Layering' : 'Violations Detected'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cave Score & ROI</div>
+      <div class="stat-value" style="color: #a78bfa;">
+        ${data.scorecard ? data.scorecard.caveScore : '100'} <span style="font-size:14px;color:var(--muted)">/100</span>
+      </div>
+      <div class="stat-desc">Saved ~${data.scorecard ? data.scorecard.totalTokensSaved : 0} Tokens</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Engine Uptime</div>
@@ -186,6 +203,24 @@ export function renderDashboardHtml(data: {
           </div>
         `).join('')}
       </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 24px;">
+    <div class="card-head">
+      <div class="card-title">Functional Module Communities (Graphify Clustering)</div>
+      <span style="font-size: 12px; color: var(--muted);">${(data.communities || []).length} communities detected</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+      ${(data.communities || []).map(c => `
+        <div style="background: #172033; border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <strong style="color: #60a5fa; font-size: 13px;">${c.name}</strong>
+            <span class="badge badge-historical">${c.nodeCount} symbols</span>
+          </div>
+          <div style="font-size: 11px; color: var(--muted);">Density: ${c.densityScore} | Top: ${c.symbols.slice(0, 3).join(', ')}</div>
+        </div>
+      `).join('')}
     </div>
   </div>
 
