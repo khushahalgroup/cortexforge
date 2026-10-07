@@ -1,0 +1,55 @@
+{
+  "enabled": true,
+  "mode": "auto",
+
+  "intelligence": {
+    "adaptive": true,
+    "autoEscalation": true,
+    "escalationLevel": 1
+  },
+
+  "compression": {
+    "enabled": true,
+    "reversible": true,
+    "level": "balanced",
+    "cacheLimitMB": 64
+  },
+
+  "memory": {
+    "enabled": true,
+    "progressiveDisclosure": true,
+    "importanceThreshold": 0.4,
+    "autoConflictResolution": true
+  },
+
+  "graph": {
+    "enabled": true,
+    "incremental": true,
+    "maxDepth": 4,
+    "indexTests": true
+  },
+
+  "architecture": {
+    "enabled": true,
+    "autoUpdate": true,
+    "format": "mermaid"
+  },
+
+  "minimalism": {
+    "enabled": true,
+    "autoReviewDiff": true,
+    "maxLocTolerance": 50
+  },
+
+  "privacy": {
+    "localOnly": true,
+    "redactSecrets": true,
+    "telemetry": false
+  },
+
+  "worker": {
+    "port": 49210,
+    "autoStart": true,
+    "heartbeatIntervalMs": 15000
+  }
+}

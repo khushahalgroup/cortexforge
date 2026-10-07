@@ -1,0 +1,29 @@
+{
+  "name": "cortexforge",
+  "version": "1.0.0",
+  "description": "Next-generation autonomous developer intelligence platform for AI coding agents",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "cortexforge": "bin/cortexforge.js"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "cli": "node --experimental-strip-types bin/cortexforge.js",
+    "test": "node --experimental-strip-types tests/unit.test.ts",
+    "benchmark": "node --experimental-strip-types bin/cortexforge.js benchmark",
+    "doctor": "node --experimental-strip-types bin/cortexforge.js doctor"
+  },
+  "keywords": [
+    "cortexforge",
+    "developer-intelligence",
+    "ai-agent",
+    "mcp",
+    "code-graph",
+    "persistent-memory",
+    "context-compression",
+    "minimalism"
+  ],
+  "author": "CortexForge Architecture Team",
+  "license": "Apache-2.0"
+}

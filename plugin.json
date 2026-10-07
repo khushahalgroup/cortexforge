@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/partial-ra-plugin",
+  "name": "cortexforge",
+  "displayName": "CortexForge Autonomous Intelligence",
+  "version": "1.0.0",
+  "description": "Unified autonomous developer intelligence platform with persistent memory, code knowledge graph, reversible context compression, and minimalism verification.",
+  "publisher": "khushahalgroup",
+  "main": "src/index.ts",
+  "bin": "bin/cortexforge.js",
+  "mcp": {
+    "command": "node",
+    "args": ["--experimental-strip-types", "src/server/mcp.ts"]
+  },
+  "hooks": {
+    "onSessionStart": "node --experimental-strip-types bin/cortexforge.js start",
+    "onToolExecution": "node --experimental-strip-types bin/cortexforge.js intercept-tool",
+    "onFileSave": "node --experimental-strip-types bin/cortexforge.js on-save"
+  },
+  "skills": ["SKILL.md"],
+  "commands": [
+    "/fusion",
+    "/fusion status",
+    "/fusion memory",
+    "/fusion graph",
+    "/fusion architecture",
+    "/fusion review",
+    "/fusion audit",
+    "/fusion stats",
+    "/fusion doctor",
+    "/fusion learn",
+    "/fusion recover",
+    "/fusion config"
+  ]
+}
