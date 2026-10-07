@@ -159,6 +159,7 @@ CortexForge replaces fragmented plugins with a unified **One-Brain Model**:
 | :--- | :--- |
 | `cortexforge status` | Display system status, host agent, stored memories, and god node counts. |
 | `cortexforge start` | Launch the background worker and serve the interactive web dashboard. |
+| `cortexforge memory <query>` | Search persistent engineering memory using BM25 hybrid semantic scoring. |
 | `cortexforge god-nodes` | Identify architectural god nodes and single-points-of-failure. |
 | `cortexforge path <from> <to>` | Calculate shortest dependency path between any two symbols. |
 | `cortexforge communities` | Detect modular clusters and calculate graph modularity density. |
@@ -242,8 +243,14 @@ Add to your `mcpServers` configuration:
 ## 🧪 Running Tests & Diagnostics
 
 ```bash
-# Run comprehensive unit test suite (45 tests)
+# Run baseline unit test suite (45 tests)
 node --experimental-strip-types tests/unit.test.ts
+
+# Run comprehensive stress & fuzz test suite (124 tests across all subsystems)
+node --experimental-strip-types tests/stress_and_edge_cases.test.ts
+
+# Run all 169 tests together
+node --experimental-strip-types tests/unit.test.ts ; node --experimental-strip-types tests/stress_and_edge_cases.test.ts
 
 # Run self-diagnostics
 node --experimental-strip-types bin/cortexforge.js doctor
