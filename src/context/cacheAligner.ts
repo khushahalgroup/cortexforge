@@ -29,15 +29,16 @@ export class CacheAligner {
   }): IAlignedPrompt {
     // 1. Build deterministic static prefix
     // Deterministically sort stable memories and code symbols by canonical ID
-    const sortedMemories = [...params.stableMemories].sort((a, b) => a.id.localeCompare(b.id));
-    const sortedSymbols = [...params.codeSymbols].sort((a, b) => a.id.localeCompare(b.id));
+    const sortedMemories = [...(params.stableMemories || [])].sort((a, b) => a.id.localeCompare(b.id));
+    const sortedSymbols = [...(params.codeSymbols || [])].sort((a, b) => a.id.localeCompare(b.id));
+    const profile = params.projectProfile || {};
 
     const prefixParts: string[] = [
       '=== CORTEXFORGE STABLE SYSTEM DIRECTIVE ===',
-      params.systemInstructions.trim(),
+      (params.systemInstructions || '').trim(),
       '',
       '=== PROJECT PROFILE (IMMUTABLE) ===',
-      JSON.stringify(params.projectProfile, Object.keys(params.projectProfile).sort()),
+      JSON.stringify(profile, Object.keys(profile).sort()),
       '',
       '=== CANONICAL ENGINEERING MEMORIES (SORTED) ===',
       ...sortedMemories.map((m) => `[${m.id}] ${m.topic}: ${m.summary}`),

@@ -50,19 +50,41 @@ export class SmartCrusher {
 
     const originalBytes = Buffer.byteLength(rawString, 'utf-8');
 
-    // Case 1: Array of objects with uniform or overlapping keys
-    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null) {
-      const crushed = this.crushObjectArray(parsed, originalBytes);
-      const crushedString = JSON.stringify(crushed);
-      const crushedBytes = Buffer.byteLength(crushedString, 'utf-8');
-      const savedPercentage = Math.max(0, Math.round(((originalBytes - crushedBytes) / originalBytes) * 100));
+    // Case 1: Array handling
+    if (Array.isArray(parsed)) {
+      if (parsed.length === 0) {
+        return {
+          crushedString: '[]',
+          originalBytes,
+          crushedBytes: 2,
+          savedPercentage: 0,
+          isCrushed: false,
+        };
+      }
 
+      if (typeof parsed[0] === 'object' && parsed[0] !== null) {
+        const crushed = this.crushObjectArray(parsed, originalBytes);
+        const crushedString = JSON.stringify(crushed);
+        const crushedBytes = Buffer.byteLength(crushedString, 'utf-8');
+        const savedPercentage = Math.max(0, Math.round(((originalBytes - crushedBytes) / originalBytes) * 100));
+
+        return {
+          crushedString,
+          originalBytes,
+          crushedBytes,
+          savedPercentage,
+          isCrushed: true,
+        };
+      }
+
+      const minified = JSON.stringify(parsed);
+      const minifiedBytes = Buffer.byteLength(minified, 'utf-8');
       return {
-        crushedString,
+        crushedString: minified,
         originalBytes,
-        crushedBytes,
-        savedPercentage,
-        isCrushed: true,
+        crushedBytes: minifiedBytes,
+        savedPercentage: Math.max(0, Math.round(((originalBytes - minifiedBytes) / originalBytes) * 100)),
+        isCrushed: false,
       };
     }
 

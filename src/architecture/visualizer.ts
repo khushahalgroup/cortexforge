@@ -36,6 +36,18 @@ export class ArchitectureVisualizer {
     return lines.join('\n');
   }
 
+  public static generateMermaidDiagram(model: IArchitectureModel): string {
+    return this.generateMermaid(model);
+  }
+
+  public generateMermaidDiagram(model: IArchitectureModel): string {
+    return ArchitectureVisualizer.generateMermaid(model);
+  }
+
+  public generateMermaid(model: IArchitectureModel): string {
+    return ArchitectureVisualizer.generateMermaid(model);
+  }
+
   public static generateDataflowMarkdown(model: IArchitectureModel): string {
     const lines: string[] = ['# System Architecture & Verified Dataflows\n'];
 

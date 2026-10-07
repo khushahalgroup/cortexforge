@@ -173,15 +173,18 @@ export class ContextCompressor {
     const lines = log.split(/\r?\n/);
 
     if (intensity === 'ULTRA') {
-      const ultraLines = lines.filter(
-        (l) =>
-          l.includes('Error') ||
-          l.includes('FAIL') ||
-          l.includes('exit code') ||
-          l.includes('at ') ||
-          l.includes('warning') ||
-          l.match(/[a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+:\d+/)
-      );
+      const ultraLines = lines.filter((l) => {
+        const lower = l.toLowerCase();
+        return (
+          lower.includes('error') ||
+          lower.includes('fail') ||
+          lower.includes('exit code') ||
+          lower.includes('fatal') ||
+          l.trim().startsWith('at ') ||
+          lower.includes('warning') ||
+          Boolean(l.match(/[a-zA-Z0-9_\-./]+\.[a-zA-Z0-9]+:\d+/))
+        );
+      });
       return ultraLines.length > 0 ? ultraLines.join('\n') : lines.slice(0, 5).join('\n');
     }
 

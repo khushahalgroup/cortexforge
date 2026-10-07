@@ -31,6 +31,7 @@ export interface IAgentDetectionResult {
   };
   supportStatus: 'SUPPORTED' | 'PARTIAL' | 'UNSUPPORTED';
   projectProfile: IProjectProfile;
+  suggestedOptimizations: string[];
 }
 
 export class AgentDetector {
@@ -82,6 +83,10 @@ export class AgentDetector {
     // 3. Inspect Project Metadata
     const projectProfile = this.inspectProject(cwd);
 
+    const suggestedOptimizations: string[] = [];
+    if (!hasHooks) suggestedOptimizations.push('Enable hooks for automated pre/post tool telemetry.');
+    if (!hasMcp) suggestedOptimizations.push('Enable MCP server for direct tool interoperability.');
+
     return {
       hostAgent,
       agentVersion: version,
@@ -95,6 +100,7 @@ export class AgentDetector {
       },
       supportStatus,
       projectProfile,
+      suggestedOptimizations,
     };
   }
 

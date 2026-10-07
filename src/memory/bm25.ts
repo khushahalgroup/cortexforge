@@ -55,7 +55,30 @@ export class BM25Engine {
     return subTokens;
   }
 
+  public removeDocument(id: string): void {
+    const oldTermFreqMap = this.docTermFreqs.get(id);
+    if (oldTermFreqMap) {
+      for (const term of oldTermFreqMap.keys()) {
+        const count = this.docFreqs.get(term) || 0;
+        if (count <= 1) {
+          this.docFreqs.delete(term);
+        } else {
+          this.docFreqs.set(term, count - 1);
+        }
+      }
+      this.docTermFreqs.delete(id);
+      this.docLengths.delete(id);
+      this.documents.delete(id);
+      this.docCount = Math.max(0, this.docCount - 1);
+      this.updateAverageLength();
+    }
+  }
+
   public addDocument(doc: IBM25Document): void {
+    if (this.documents.has(doc.id)) {
+      this.removeDocument(doc.id);
+    }
+
     const tokens = this.tokenize(doc.text);
     const docLength = tokens.length;
 

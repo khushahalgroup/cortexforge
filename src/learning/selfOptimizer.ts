@@ -1,4 +1,4 @@
-import type { CortexDatabase } from '../storage/database.ts';
+import { CortexDatabase } from '../storage/database.ts';
 
 export interface ILearningPattern {
   id: string;
@@ -12,9 +12,18 @@ export interface ILearningPattern {
 
 export class SelfOptimizer {
   private db: CortexDatabase;
+  private customPatterns: Array<{ trigger: string; fix: string; success: boolean }> = [];
 
-  constructor(db: CortexDatabase) {
-    this.db = db;
+  constructor(db?: CortexDatabase) {
+    this.db = db || new CortexDatabase();
+  }
+
+  public recordPattern(pattern: { trigger: string; fix: string; success: boolean }): void {
+    this.customPatterns.push(pattern);
+  }
+
+  public getPatterns(): Array<{ trigger: string; fix: string; success: boolean }> {
+    return [...this.customPatterns];
   }
 
   public analyzeRecentPatterns(): ILearningPattern[] {

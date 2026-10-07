@@ -26,6 +26,7 @@ export class CodeFolder {
     let braceDepth = 0;
     let blockStartDepth = 0;
     let currentSymbol = '';
+    let lastSignatureSymbol = '';
     let foldedLinesCount = 0;
     let skippedInBlock = 0;
 
@@ -33,15 +34,20 @@ export class CodeFolder {
       const line = lines[i];
       const trimmed = line.trim();
 
+      const isParamContinuation = trimmed.startsWith(')') || (!trimmed.includes('(') && trimmed.includes('):'));
+
       // Detect function / method / class declaration
-      const funcMatch = line.match(
-        /(?:export\s+)?(?:async\s+)?(?:function\s+|class\s+|interface\s+|type\s+|public\s+|private\s+|protected\s+|const\s+\w+\s*=\s*(?:async\s*)?\([^)]*\)\s*=>)([\w$]+)?/
-      );
+      const funcMatch = !isParamContinuation
+        ? line.match(
+            /(?:export\s+)?(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:async\s+)?(?:function\s+|class\s+|interface\s+|type\s+)?([\w$]+)\s*(?:\(|<[^{]*>|\{|=)/
+          )
+        : null;
 
       if (!insideBlock && funcMatch) {
         const symName = funcMatch[1] || 'anonymous';
         if (symName !== 'anonymous') {
           symbolsFound.push(symName);
+          lastSignatureSymbol = symName;
         }
       }
 
@@ -52,13 +58,15 @@ export class CodeFolder {
           !isClassOrNamespace &&
           (trimmed.includes('function') ||
             trimmed.includes('=>') ||
-            line.match(/(?:public|private|protected|async)?\s*\w+\s*\([^)]*\)\s*(?::\s*[^{]+)?\s*\{/));
+            Boolean(lastSignatureSymbol) ||
+            Boolean(line.match(/(?:public|private|protected|static)?\s*(?:async\s*)?\w+\s*\([^)]*\)\s*(?::\s*[^{]+)?\s*\{/)));
 
         if (isFunctionOrMethod) {
           resultLines.push(line);
           insideBlock = true;
           blockStartDepth = braceDepth;
-          currentSymbol = funcMatch ? funcMatch[1] || 'method' : 'method';
+          currentSymbol = lastSignatureSymbol || (funcMatch ? funcMatch[1] : '') || 'method';
+          lastSignatureSymbol = '';
           skippedInBlock = 0;
           braceDepth += (line.match(/\{/g) || []).length;
           braceDepth -= (line.match(/\}/g) || []).length;
@@ -90,6 +98,11 @@ export class CodeFolder {
       braceDepth += (line.match(/\{/g) || []).length;
       braceDepth -= (line.match(/\}/g) || []).length;
       resultLines.push(line);
+    }
+
+    if (insideBlock && skippedInBlock > 0) {
+      resultLines.push(`  /* ... [${skippedInBlock} lines folded in ${currentSymbol}] ... */`);
+      foldedLinesCount += skippedInBlock;
     }
 
     const totalLines = lines.length;
@@ -128,7 +141,7 @@ export class CodeFolder {
           !isClassOrNamespace &&
           (trimmed.includes('function') ||
             trimmed.includes('=>') ||
-            line.match(/(?:public|private|protected|async)?\s*\w+\s*\([^)]*\)\s*(?::\s*[^{]+)?\s*\{/));
+            Boolean(line.match(/(?:public|private|protected|static)?\s*(?:async\s*)?\w+\s*\([^)]*\)\s*(?::\s*[^{]+)?\s*\{/)));
 
         if (isFunctionOrMethod) {
           const isTarget = line.includes(targetSymbol);

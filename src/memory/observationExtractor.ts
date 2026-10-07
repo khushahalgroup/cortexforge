@@ -24,23 +24,24 @@ export class ObservationExtractor {
       return null;
     }
 
-    const outputLower = output.toLowerCase();
+    const cleanOutput = output.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
+    const outputLower = cleanOutput.toLowerCase();
 
     // 1. Detect Bug Fix / Resolution
     if (
       (outputLower.includes('fixed') || outputLower.includes('resolved') || outputLower.includes('pass')) &&
       (outputLower.includes('error') || outputLower.includes('bug') || outputLower.includes('fail') || outputLower.includes('crash') || outputLower.includes('issue') || outputLower.includes('fix'))
     ) {
-      const match = output.match(/(?:fixed|resolved|passing)\s+([^.\n]+)/i);
+      const match = cleanOutput.match(/(?:fixed|resolved|passing)\s+([^.\n]+)/i);
       const summary = match ? match[1].trim() : 'Resolved test failure or runtime bug';
       return {
         topic: 'Bug Resolution',
         summary: `Fixed issue: ${summary}`,
-        details: output.slice(0, 300),
+        details: cleanOutput.slice(0, 300),
         category: 'BUG_FIX',
         evidence: 'FACT',
         importance: 0.9,
-        relatedSymbols: this.extractSymbols(output),
+        relatedSymbols: this.extractSymbols(cleanOutput),
       };
     }
 

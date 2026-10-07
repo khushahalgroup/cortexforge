@@ -1,4 +1,4 @@
-import type { CortexDatabase } from '../storage/database.ts';
+import { CortexDatabase } from '../storage/database.ts';
 import { OverengineeringAuditor, type IPonytailScoreboard } from './overengineeringAuditor.ts';
 
 export interface IDiffReviewFinding {
@@ -21,8 +21,12 @@ export interface IDiffReviewResult {
 export class DiffOptimizer {
   private db: CortexDatabase;
 
-  constructor(db: CortexDatabase) {
-    this.db = db;
+  constructor(db?: CortexDatabase) {
+    this.db = db || new CortexDatabase();
+  }
+
+  public reviewGitDiff(diffText: string): IDiffReviewResult {
+    return this.reviewDiff(diffText);
   }
 
   public reviewDiff(diffText: string): IDiffReviewResult {

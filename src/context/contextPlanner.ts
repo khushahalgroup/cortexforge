@@ -87,7 +87,7 @@ export class ContextPlanner {
     return Math.ceil(text.length / 4);
   }
 
-  public calculateHeadroom(consumedTokens: number, windowLimit: number = 128000): {
+  public static calculateHeadroom(consumedTokens: number, windowLimit: number = 128000): {
     consumedTokens: number;
     windowLimit: number;
     headroomTokens: number;

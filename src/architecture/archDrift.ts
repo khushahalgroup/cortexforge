@@ -76,6 +76,7 @@ export class ArchitectureDrift {
     const edges = this.db.getEdges().filter((e) => e.relationship === 'imports');
     const violations: IDriftViolation[] = [];
     const layerDistribution: Record<ArchLayer, number> = {
+      TEST: 0,
       PRESENTATION: 0,
       APPLICATION: 0,
       DOMAIN: 0,

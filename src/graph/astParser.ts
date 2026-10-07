@@ -1,3 +1,4 @@
+import * as path from 'node:path';
 import type { IGraphNode, IGraphEdge, SymbolType } from '../storage/schemas.ts';
 
 export interface IParsedFileResult {
@@ -7,7 +8,7 @@ export interface IParsedFileResult {
 
 export class AstParser {
   public static parseFile(relPath: string, content: string): IParsedFileResult {
-    const fileId = `file_${relPath}`;
+    const fileId = `file_${relPath.replace(/\\/g, '/')}`;
     const nodes: IGraphNode[] = [];
     const edges: IGraphEdge[] = [];
 
@@ -38,9 +39,15 @@ export class AstParser {
         const importMatch = line.match(/import\s+(?:\{([^}]+)\}|\*\s+as\s+(\w+)|(\w+))\s+from\s+['"]([^'"]+)['"]/);
         if (importMatch) {
           const targetModule = importMatch[4];
+          let resolvedTarget = targetModule;
+          if (targetModule.startsWith('.')) {
+            const normalizedRel = relPath.replace(/\\/g, '/');
+            const dir = path.posix.dirname(normalizedRel);
+            resolvedTarget = path.posix.normalize(path.posix.join(dir, targetModule));
+          }
           edges.push({
             sourceId: fileId,
-            targetId: `file_${targetModule}`,
+            targetId: `file_${resolvedTarget}`,
             relationship: 'imports',
             evidenceLine: lineNum,
           });

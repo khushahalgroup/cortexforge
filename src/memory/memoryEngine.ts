@@ -88,28 +88,27 @@ export class MemoryEngine {
     }
 
     // 2. Hybrid Re-ranking with Reciprocal Rank Fusion & Recency
+    const isKeywordQuery = queryText.trim().length > 0;
     const memories = this.db.getAllMemories().filter((m) => !m.isDeprecated);
-    const scored = memories.map((mem) => {
-      const bm25Score = bm25ScoreMap.get(mem.id) || 0;
-      
-      // Normalized BM25 score (bounded)
-      const normalizedBm25 = Math.min(1.0, bm25Score / 5.0);
+    const results = memories
+      .map((mem) => {
+        const bm25Score = bm25ScoreMap.get(mem.id) || 0;
 
-      const recencyDays = Math.max(0, (Date.now() - mem.recency) / (1000 * 60 * 60 * 24));
-      const recencyFactor = Math.max(0.1, 1.0 / (1.0 + recencyDays * 0.05));
+        if (isKeywordQuery && bm25Score === 0) {
+          return { mem, score: 0, bm25Score: 0 };
+        }
 
-      // Composite score: 45% BM25 relevance, 25% importance, 20% utility, 10% recency
-      const compositeScore =
-        normalizedBm25 * 0.45 +
-        mem.importance * 0.25 +
-        Math.min(1.0, mem.utilityScore * 0.2) +
-        recencyFactor * 0.1;
+        const normalizedBm25 = Math.min(1.0, bm25Score / 3.0);
+        const recencyDays = Math.max(0, (Date.now() - mem.recency) / (1000 * 60 * 60 * 24));
+        const recencyFactor = Math.max(0.1, 1.0 / (1.0 + recencyDays * 0.05));
 
-      return { mem, score: compositeScore, bm25Score };
-    });
+        const compositeScore = isKeywordQuery
+          ? normalizedBm25 * 0.70 + mem.importance * 0.15 + Math.min(1.0, mem.utilityScore / 10.0) * 0.10 + recencyFactor * 0.05
+          : mem.importance * 0.50 + recencyFactor * 0.30 + Math.min(1.0, mem.utilityScore / 10.0) * 0.20;
 
-    const results = scored
-      .filter((s) => s.score >= minScore || s.bm25Score > 0.5)
+        return { mem, score: compositeScore, bm25Score };
+      })
+      .filter((s) => s.score >= minScore)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map((s) => {

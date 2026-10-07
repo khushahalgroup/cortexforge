@@ -6,8 +6,8 @@ export interface ISafetyCheckResult {
 
 export class SecretRedactor {
   private static readonly PATTERNS: Array<{ regex: RegExp; token: string }> = [
-    // OpenAI / Generic API keys
-    { regex: /sk-[A-Za-z0-9]{32,}/g, token: '<redacted:OPENAI_API_KEY>' },
+    // OpenAI / Generic API keys (legacy and modern sk-proj keys)
+    { regex: /sk-[A-Za-z0-9_-]{32,}/g, token: '<redacted:OPENAI_API_KEY>' },
     // GitHub Tokens
     { regex: /gh[pous]_[A-Za-z0-9]{36,}/g, token: '<redacted:GITHUB_TOKEN>' },
     // AWS Access Key ID
@@ -56,5 +56,13 @@ export class SecretRedactor {
     }
 
     return { safe: true, command };
+  }
+
+  public redact(text: string): { cleanText: string; redactionCount: number } {
+    return SecretRedactor.redact(text);
+  }
+
+  public checkCommandSafety(command: string): ISafetyCheckResult {
+    return SecretRedactor.checkCommandSafety(command);
   }
 }

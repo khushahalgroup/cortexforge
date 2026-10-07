@@ -42,10 +42,10 @@ export class OverengineeringAuditor {
     let duplicateUtilitiesFound = 0;
 
     // 1. Check for Passthrough Wrappers (e.g. class with 1 method that only calls a delegate)
-    const classMatch = code.match(/class\s+(\w+)[^{]*\{([^}]+)\}/g);
+    const classMatch = code.match(/class\s+(\w+)[^{]*\{([\s\S]*?)\n\}/g) || code.match(/class\s+(\w+)[^{]*\{([^}]+)\}/g);
     if (classMatch) {
       for (const cls of classMatch) {
-        const methods = cls.match(/(?:public\s+|private\s+|async\s+)?\w+\s*\([^)]*\)\s*\{[^}]*\}/g) || [];
+        const methods = cls.match(/(?:public\s+|private\s+|async\s+)?\w+\s*\([^)]*\)(?::\s*[^{]+)?\s*\{[^}]*\}/g) || [];
         if (methods.length === 1) {
           const methodBody = methods[0];
           if (methodBody.includes('return this.') && methodBody.split('\n').length <= 4) {
@@ -71,15 +71,20 @@ export class OverengineeringAuditor {
       for (const f of factoryMatch) {
         const nameMatch = f.match(/class\s+(\w+)/);
         const name = nameMatch ? nameMatch[1] : 'Factory';
-        smells.push({
-          type: 'PREMATURE_FACTORY',
-          symbolName: name,
-          filePath: fileName,
-          severity: 'MEDIUM',
-          recommendation: `Consider direct instantiation over '${name}' until multiple polymorphic variants actually exist.`,
-          locAvoidable: 15,
-        });
-        locAvoided += 15;
+        const methodCount = (f.match(/(?:create\w*|\w+)\s*\([^)]*\)\s*[:{]/g) || []).length;
+        const isTrivial = f.includes('return new ') || f.split('\n').length <= 15;
+
+        if (isTrivial && methodCount <= 2) {
+          smells.push({
+            type: 'PREMATURE_FACTORY',
+            symbolName: name,
+            filePath: fileName,
+            severity: 'MEDIUM',
+            recommendation: `Consider direct instantiation over '${name}' until multiple polymorphic variants actually exist.`,
+            locAvoidable: 15,
+          });
+          locAvoided += 15;
+        }
       }
     }
 

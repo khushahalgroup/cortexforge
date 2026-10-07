@@ -134,4 +134,31 @@ export class AgentInterceptor {
       diagnostics,
     };
   }
+
+  public beforeToolExecution(
+    toolName: string,
+    args: Record<string, unknown>
+  ): { proceed: boolean; sanitizedArgs: Record<string, unknown>; reason?: string } {
+    const res = this.onPreToolExecution(toolName, args);
+    return {
+      proceed: res.allowed,
+      sanitizedArgs: res.sanitizedArgs,
+      reason: res.rejectionReason,
+    };
+  }
+
+  public afterToolExecution(
+    toolName: string,
+    argsOrOutput: Record<string, unknown> | string,
+    outputMaybe?: string
+  ): { output: string; tokensSaved: number; diagnosticReport?: string; recoveryHandle?: string } {
+    const rawOutput = typeof argsOrOutput === 'string' ? argsOrOutput : outputMaybe || '';
+    const res = this.onPostToolExecution(toolName, rawOutput);
+    return {
+      output: res.optimizedOutput,
+      tokensSaved: res.tokensSaved,
+      diagnosticReport: res.diagnostics,
+      recoveryHandle: res.recoveryHandle,
+    };
+  }
 }
