@@ -19,6 +19,19 @@ export async function runCli(args: string[]): Promise<void> {
     case 'graph':
       await CliCommands.graph(args[1], args[2]);
       break;
+    case 'god-nodes':
+      await CliCommands.godNodes();
+      break;
+    case 'cycles':
+      await CliCommands.cycles();
+      break;
+    case 'blast-radius':
+      if (!args[1]) {
+        console.error('Usage: cortexforge blast-radius <SYMBOL_OR_FILE_ID>');
+        process.exit(1);
+      }
+      await CliCommands.blastRadius(args[1]);
+      break;
     case 'architecture':
       await CliCommands.architecture();
       break;
@@ -40,13 +53,12 @@ export async function runCli(args: string[]): Promise<void> {
       break;
     default:
       console.log(`Unknown command '${command}'. Available commands:`);
-      console.log('  status, doctor, start, benchmark, graph, architecture, review, recover, install, uninstall');
+      console.log('  status, doctor, start, benchmark, graph, god-nodes, cycles, blast-radius, architecture, review, recover, install, uninstall');
       break;
   }
 }
 
-// If invoked as entrypoint
-if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.ts')) {
+if (process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js')) {
   runCli(process.argv.slice(2)).catch((err) => {
     console.error('Fatal CLI Error:', err);
     process.exit(1);

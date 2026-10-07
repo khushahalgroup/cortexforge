@@ -19,6 +19,8 @@ export class CliCommands {
     const detection = AgentDetector.detect();
     const mems = this.db.getAllMemories();
     const nodes = this.db.getAllNodes();
+    const graph = new CodeGraph(this.db);
+    const godNodes = graph.detectGodNodes(2);
 
     console.log('\n========================================');
     console.log('       CORTEXFORGE INTELLIGENCE         ');
@@ -29,19 +31,25 @@ export class CliCommands {
     console.log(` Language:         ${detection.projectProfile.language}`);
     console.log(` Framework:        ${detection.projectProfile.framework || 'N/A'}`);
     console.log(` Integration Mode: ${detection.integrationMode}`);
-    console.log(` Memories Stored:  ${mems.length}`);
+    console.log(` Memories Stored:  ${mems.length} (BM25 Indexed)`);
     console.log(` Code Graph Nodes: ${nodes.length}`);
+    console.log(` God Nodes (Hubs): ${godNodes.length}`);
     console.log('========================================\n');
   }
 
   public static async doctor(): Promise<void> {
     console.log('\nRunning CortexForge Self-Diagnostics...');
     const detection = AgentDetector.detect();
+    const graph = new CodeGraph(this.db);
+    const godNodes = graph.detectGodNodes(2);
+    const cycles = graph.detectCircularDependencies();
 
     console.log(`[OK] Host Agent:       ${detection.hostAgent} (${detection.supportStatus})`);
     console.log(`[OK] Storage Engine:   SQLite/JSON database accessible`);
     console.log(`[OK] Code Graph:       ${this.db.getAllNodes().length} nodes indexed`);
-    console.log(`[OK] Memory Engine:    ${this.db.getAllMemories().length} memories active`);
+    console.log(`[OK] God Nodes:        ${godNodes.length} architectural hubs identified`);
+    console.log(`[OK] Circular Checks:  ${cycles.length} cycles detected`);
+    console.log(`[OK] Memory Engine:    ${this.db.getAllMemories().length} active memories (BM25 Hybrid)`);
     console.log(`[OK] Worker State:     Operational`);
     console.log('\nAll CortexForge subsystems are healthy.\n');
   }
@@ -80,7 +88,7 @@ export class CliCommands {
     const graph = new CodeGraph(this.db);
     if (action === 'index' || !action) {
       console.log('Indexing project source files into Code Graph...');
-      graph.scanDirectory(process.cwd(), 300);
+      graph.scanDirectory(process.cwd(), 500);
       console.log(`Graph scan complete. Total symbols indexed: ${this.db.getAllNodes().length}`);
     } else if (action === 'query' && target) {
       const res = graph.querySymbol(target);
@@ -88,6 +96,33 @@ export class CliCommands {
       console.log('Inbound callers:', res.inboundEdges);
       console.log('Outbound calls:', res.outboundEdges);
     }
+  }
+
+  public static async godNodes(): Promise<void> {
+    const graph = new CodeGraph(this.db);
+    const godNodes = graph.detectGodNodes(2);
+    console.log(`\nDetected ${godNodes.length} Architectural God Nodes (Hubs):`);
+    console.table(godNodes);
+  }
+
+  public static async cycles(): Promise<void> {
+    const graph = new CodeGraph(this.db);
+    const cycles = graph.detectCircularDependencies();
+    if (cycles.length === 0) {
+      console.log('\n[PASS] No circular import cycles detected in project.');
+    } else {
+      console.log(`\n[WARNING] Found ${cycles.length} circular dependency cycles:`);
+      for (const c of cycles) {
+        console.log(' -> ' + c.cycle.join(' -> '));
+      }
+    }
+  }
+
+  public static async blastRadius(symbol: string): Promise<void> {
+    const graph = new CodeGraph(this.db);
+    const res = graph.getBlastRadius(symbol);
+    console.log(`\nBlast Radius for '${symbol}' (${res.length} cascading dependents):`);
+    console.log(res);
   }
 
   public static async architecture(): Promise<void> {
@@ -102,7 +137,6 @@ export class CliCommands {
 
   public static async review(): Promise<void> {
     const diffOpt = new DiffOptimizer(this.db);
-    // Attempt reading git diff if in a git repo
     let diffText = '';
     try {
       const { execSync } = await import('node:child_process');

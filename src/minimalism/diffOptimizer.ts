@@ -1,16 +1,18 @@
 import type { CortexDatabase } from '../storage/database.ts';
 
 export interface IDiffReviewFinding {
-  type: 'DUPLICATE_LOGIC' | 'OVERENGINEERING' | 'UNUSED_ABSTRACTION' | 'DEAD_CODE';
+  type: 'DUPLICATE_LOGIC' | 'OVERENGINEERING' | 'UNUSED_ABSTRACTION' | 'DEAD_CODE' | 'COMPLEXITY_SPIKE';
   file: string;
   message: string;
   recommendation: string;
   locSavingsEstimate: number;
+  surgicalReplacement?: string;
 }
 
 export interface IDiffReviewResult {
   passed: boolean;
   totalLocSavings: number;
+  cyclomaticComplexityDelta: number;
   findings: IDiffReviewFinding[];
   summaryMessage: string;
 }
@@ -28,14 +30,23 @@ export class DiffOptimizer {
     const lines = diffText.split(/\r?\n/);
 
     let currentFile = 'unknown';
+    let addedComplexity = 0;
 
-    for (const line of lines) {
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+
       if (line.startsWith('+++ b/')) {
         currentFile = line.replace('+++ b/', '').trim();
       }
 
       if (line.startsWith('+') && !line.startsWith('+++')) {
-        const addedFuncMatch = line.match(/(?:function|const|let)\s+(\w+)\s*=\s*(?:async\s*)?\(/);
+        // Track cyclomatic complexity indicators
+        if (/\b(if|for|while|case|catch)\b|\&\&|\|\||\?\.|\?\?/.test(line)) {
+          addedComplexity++;
+        }
+
+        // 1. Detect duplicate functions / symbols
+        const addedFuncMatch = line.match(/(?:function|const|let|var)\s+(\w+)\s*(?:=\s*(?:async\s*)?(?:\([^)]*\)|[a-zA-Z0-9_]+)?\s*=>|\()/);
         if (addedFuncMatch) {
           const newName = addedFuncMatch[1];
           const duplicate = existingNodes.find(
@@ -46,37 +57,51 @@ export class DiffOptimizer {
             findings.push({
               type: 'DUPLICATE_LOGIC',
               file: currentFile,
-              message: `Added function '${newName}' appears to duplicate existing symbol '${duplicate.id}'.`,
-              recommendation: `Reuse '${duplicate.name}' from '${duplicate.fileId}' instead of creating a new duplicate helper.`,
-              locSavingsEstimate: 15,
+              message: `Added function '${newName}' duplicates existing repository symbol '${duplicate.name}'.`,
+              recommendation: `Import and reuse '${duplicate.name}' from '${duplicate.fileId}' instead of writing duplicate logic.`,
+              locSavingsEstimate: 18,
+              surgicalReplacement: `import { ${duplicate.name} } from '${duplicate.fileId.replace('file_', '')}';`,
             });
           }
         }
 
-        if (line.includes('class') && (line.includes('Manager') || line.includes('AbstractFactory') || line.includes('ProviderHelper'))) {
+        // 2. Detect Overengineering: Unnecessary Factory or Manager abstractions
+        if (line.includes('class') && (line.includes('Manager') || line.includes('Factory') || line.includes('Coordinator') || line.includes('ProviderHelper'))) {
           findings.push({
             type: 'OVERENGINEERING',
             file: currentFile,
-            message: `Added complex class abstraction detected in '${line.trim()}'.`,
-            recommendation: 'Evaluate if a simple pure function can achieve the same goal without extra class boilerplate.',
-            locSavingsEstimate: 30,
+            message: `Overengineering pattern detected in class declaration '${line}'.`,
+            recommendation: 'Replace generic Manager/Factory with a lightweight standalone pure function.',
+            locSavingsEstimate: 35,
+            surgicalReplacement: `// Replace with pure functional export instead of stateful Manager class`,
           });
         }
       }
     }
 
+    if (addedComplexity >= 4) {
+      findings.push({
+        type: 'COMPLEXITY_SPIKE',
+        file: currentFile,
+        message: `Diff introduces high cyclomatic complexity (+${addedComplexity} branching points).`,
+        recommendation: 'Decompose complex conditional trees into guard clauses or table-driven dispatch.',
+        locSavingsEstimate: 12,
+      });
+    }
+
     const totalLocSavings = findings.reduce((acc, f) => acc + f.locSavingsEstimate, 0);
     const passed = findings.length === 0;
 
-    let summaryMessage = 'CF REVIEW: Diff passed minimalism audit. Zero unnecessary abstractions detected.';
+    let summaryMessage = 'CF REVIEW: Diff passed minimalism audit. Zero redundant code detected.';
     if (!passed) {
       const topFinding = findings[0];
-      summaryMessage = `CF REVIEW: ${topFinding.message}\nReuse: ${topFinding.recommendation}\nExpected diff reduction: ~${totalLocSavings} LOC.`;
+      summaryMessage = `CF REVIEW: ${topFinding.message}\nAction: ${topFinding.recommendation}\nExpected diff reduction: ~${totalLocSavings} LOC.`;
     }
 
     return {
       passed,
       totalLocSavings,
+      cyclomaticComplexityDelta: addedComplexity,
       findings,
       summaryMessage,
     };

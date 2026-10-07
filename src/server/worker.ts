@@ -6,6 +6,9 @@ import { MemoryEngine } from '../memory/memoryEngine.ts';
 import { CodeGraph } from '../graph/codeGraph.ts';
 import { ContextCompressor } from '../compression/compressor.ts';
 import { ArchitectureModel } from '../architecture/archModel.ts';
+import { ArchitectureVisualizer } from '../architecture/visualizer.ts';
+import { AgentDetector } from '../detector/agentDetector.ts';
+import { renderDashboardHtml } from './dashboardHtml.ts';
 
 export class CortexWorker {
   private server?: http.Server;
@@ -36,7 +39,31 @@ export class CortexWorker {
     this.server = http.createServer((req, res) => {
       const url = req.url || '/';
 
-      // 1. Health check
+      // 1. Interactive Web Dashboard
+      if (url === '/' || url === '/dashboard') {
+        const detection = AgentDetector.detect();
+        const archModel = this.arch.inferArchitecture();
+        const mermaid = ArchitectureVisualizer.generateMermaid(archModel);
+        const godNodes = this.graph.detectGodNodes(2).slice(0, 6);
+        const recentMemories = this.memory.getAllActive().slice(-5).reverse();
+
+        const html = renderDashboardHtml({
+          projectName: detection.projectProfile.projectName,
+          hostAgent: detection.hostAgent,
+          uptime: process.uptime(),
+          memoriesCount: this.db.getAllMemories().length,
+          graphNodesCount: this.db.getAllNodes().length,
+          godNodes,
+          recentMemories,
+          mermaidGraph: mermaid,
+        });
+
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(html);
+        return;
+      }
+
+      // 2. Health check
       if (url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
@@ -51,8 +78,8 @@ export class CortexWorker {
         return;
       }
 
-      // 2. Status
-      if (url === '/status') {
+      // 3. API Status
+      if (url === '/api/status' || url === '/status') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
           JSON.stringify({
@@ -65,6 +92,13 @@ export class CortexWorker {
         return;
       }
 
+      // 4. API God Nodes
+      if (url === '/api/god-nodes') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(this.graph.detectGodNodes(1)));
+        return;
+      }
+
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Endpoint not found' }));
     });
@@ -72,7 +106,8 @@ export class CortexWorker {
     return new Promise((resolve, reject) => {
       this.server?.listen(this.port, '127.0.0.1', () => {
         fs.writeFileSync(this.pidFilePath, process.pid.toString(), 'utf-8');
-        console.info(`[CortexWorker] CortexForge worker listening on http://127.0.0.1:${this.port}`);
+        console.info(`[CortexWorker] CortexForge worker active at http://127.0.0.1:${this.port}`);
+        console.info(`[CortexWorker] Dashboard available at http://127.0.0.1:${this.port}/dashboard`);
         resolve();
       });
 
@@ -97,10 +132,9 @@ export class CortexWorker {
     if (!fs.existsSync(this.pidFilePath)) return false;
     try {
       const pid = parseInt(fs.readFileSync(this.pidFilePath, 'utf-8').trim(), 10);
-      process.kill(pid, 0); // Check if process with PID exists
+      process.kill(pid, 0);
       return true;
     } catch {
-      // Stale PID file
       return false;
     }
   }
