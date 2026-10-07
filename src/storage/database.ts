@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
+import * as os from 'node:os';
 import type {
   IProjectProfile,
   IMemoryRecord,
@@ -27,8 +28,13 @@ export class CortexDatabase {
   private dbFilePath: string;
   private state: IDatabaseState;
 
-  constructor(baseDir: string = process.cwd()) {
-    this.dataDir = path.join(baseDir, '.cortexforge');
+  constructor(baseDir?: string) {
+    let targetDir = baseDir || process.env.CORTEXFORGE_DIR || process.cwd();
+    const normalized = path.resolve(targetDir).toLowerCase();
+    if (normalized.includes('system32') || normalized.includes('windows') || normalized === 'c:\\') {
+      targetDir = process.env.CORTEXFORGE_DIR || path.join(os.homedir(), '.cortexforge_data');
+    }
+    this.dataDir = path.join(targetDir, '.cortexforge');
     this.dbFilePath = path.join(this.dataDir, 'cortex.db.json');
     this.state = this.getInitialState();
     this.init();
@@ -48,8 +54,18 @@ export class CortexDatabase {
   }
 
   private init(): void {
-    if (!fs.existsSync(this.dataDir)) {
-      fs.mkdirSync(this.dataDir, { recursive: true });
+    try {
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
+    } catch (err) {
+      this.dataDir = path.join(os.homedir(), '.cortexforge_data');
+      this.dbFilePath = path.join(this.dataDir, 'cortex.db.json');
+      try {
+        if (!fs.existsSync(this.dataDir)) {
+          fs.mkdirSync(this.dataDir, { recursive: true });
+        }
+      } catch {}
     }
 
     if (fs.existsSync(this.dbFilePath)) {

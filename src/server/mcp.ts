@@ -24,10 +24,20 @@ export class McpServer {
   private selfOptimizer: SelfOptimizer;
   private interceptor: AgentInterceptor;
 
-  constructor() {
-    this.db = new CortexDatabase();
-    this.memory = new MemoryEngine(this.db);
-    this.graph = new CodeGraph(this.db);
+  constructor(baseDir?: string) {
+    let target = baseDir || process.argv[2] || process.env.CORTEXFORGE_DIR;
+    if (!target) {
+      const cwd = process.cwd();
+      const norm = path.resolve(cwd).toLowerCase();
+      if (norm.includes('system32') || norm.includes('windows') || norm === 'c:\\') {
+        target = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([a-zA-Z]:)/, '$1')), '../..');
+      } else {
+        target = cwd;
+      }
+    }
+    this.db = new CortexDatabase(target);
+    this.memory = new MemoryEngine(this.db, target);
+    this.graph = new CodeGraph(this.db, target);
     this.compressor = new ContextCompressor(this.db);
     this.archModel = new ArchitectureModel(this.db);
     this.diffOptimizer = new DiffOptimizer(this.db);
@@ -463,6 +473,7 @@ export class McpServer {
 }
 
 if (process.argv[1]?.endsWith('mcp.ts') || process.argv[1]?.endsWith('mcp.js')) {
-  const server = new McpServer();
+  const customDir = process.argv[2] || process.env.CORTEXFORGE_DIR;
+  const server = new McpServer(customDir);
   server.runStdio();
 }
