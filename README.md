@@ -2,10 +2,13 @@
 
 > **Next-Generation Autonomous Developer Intelligence Platform for AI Coding Agents**
 
+[![User Manual](https://img.shields.io/badge/User_Manual-Full_Guide-orange.svg)](docs/USER_MANUAL.md)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](docs/LICENSE-MATRIX.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Native_Strip--Only-blue)](tsconfig.json)
 [![Architecture](https://img.shields.io/badge/Architecture-One--Brain_Model-green)](docs/ARCHITECTURE.md)
-[![Tests](https://img.shields.io/badge/Tests-45%2F45_Passing-brightgreen)](tests/unit.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-169%2F169_Passing-brightgreen)](tests/stress_and_edge_cases.test.ts)
+
+> 📖 **Looking for a beginner-friendly guide? Check out the [Full User Manual](docs/USER_MANUAL.md)** for step-by-step instructions, visual architecture flows, everyday workflows, and real-world scenarios.
 
 CortexForge is a unified autonomous developer intelligence layer that operates underneath modern AI coding agents (**Claude Code**, **Cursor**, **Gemini CLI**, **Google Antigravity**, **OpenAI Codex**, **GitHub Copilot**, and **Kiro**).
 
